@@ -7,6 +7,7 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 from rasterio.plot import plotting_extent
 from rasterio.plot import show_hist
+from rasterio.transform import xy
 from shapely.ops import cascaded_union
 from shapely.geometry.polygon import Polygon
 from cartopy.feature import ShapelyFeature
@@ -210,6 +211,26 @@ with rasterio.open(src_file) as src:
              transform= sm_dataset.transform,
              ax=ax_slope,
              title = 'Soil Moisture')
+
+
+        print(sm_dataset.profile)
+
+        xcols = range(0, sm_dataset.width + 1)
+        ycols = range(0, sm_dataset.height + 1)
+
+        xs, ys = xy(sm_dataset.transform, xcols, ycols)
+
+        print(xs)
+        print(ys)
+
+        ## TODO
+        ## use sample() to get slope values and soil moisture values
+        ## convert soil moisture values to int?
+        ## convert soil moisture values to categories (5%)
+        ## refactor repetitive code into respective methods
+        ## clean up imports
+        ## calculate soil moisture statistics on slope values normalised for area
+
 
 ## Finally - save the plots!
 
