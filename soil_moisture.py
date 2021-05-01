@@ -1,4 +1,6 @@
 import os
+import timeit
+
 import numpy as np
 
 import rasterio as rio
@@ -8,6 +10,7 @@ import matplotlib.pyplot as plt
 from rasterio.plot import plotting_extent
 from rasterio.plot import show_hist
 from rasterio.transform import xy
+from rasterio.sample import sample_gen
 from shapely.ops import cascaded_union
 from shapely.geometry.polygon import Polygon
 from cartopy.feature import ShapelyFeature
@@ -18,7 +21,6 @@ from rasterio.plot import show
 import earthpy.plot as ep
 import earthpy.spatial as es
 
-import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from cartopy.feature import ShapelyFeature
 import cartopy.crs as ccrs
@@ -29,6 +31,10 @@ from osgeo import gdal
 import numpy as np
 import rasterio
 from rasterio.warp import calculate_default_transform, reproject, Resampling
+
+from datetime import datetime
+from operator import itemgetter
+
 import geopandas
 
 # check if I can refine this import
@@ -61,6 +67,8 @@ End File Directories
 
 
 
+
+
 def order_of_magnitude(max_value, min_value):
     '''
     Returns the magnitude of difference between min_value and max_value supplied
@@ -72,6 +80,9 @@ def order_of_magnitude(max_value, min_value):
     mag_min_value = math.floor(math.log(min_value, 10))
     return (mag_max_value - mag_min_value)
 
+
+# Record the time to provide execution time later
+startTime = datetime.now()
 
 
 
@@ -165,8 +176,7 @@ with rio.open(dem_location) as dataset:
 
 
 src_file = sm_location
-dst_file = os.path.join(export_folder_location, "SM_Reproject.tif")
-#gdf = geopandas.read_file('confidence.shp')
+dst_file = os.path.join(export_folder_location, "soil_moisture_reprojected.tif")
 dst_crs = input_crs
 
 with rasterio.open(src_file) as src:
@@ -213,25 +223,80 @@ with rasterio.open(src_file) as src:
              title = 'Soil Moisture')
 
 
-        print(sm_dataset.profile)
+# Calculate some statistics
+# Start with the soil moisture data
+
+        print("Soil moisture dataset profile: ", sm_dataset.profile)
 
         xcols = range(0, sm_dataset.width + 1)
         ycols = range(0, sm_dataset.height + 1)
 
         xs, ys = xy(sm_dataset.transform, xcols, ycols)
 
-        print(xs)
-        print(ys)
+        # make a tuple from the coordinates as the rasterio sample() method requires pairs of coordinates
+        sm_pixel_coordinates = tuple(zip(xs, ys))
 
-        ## TODO
-        ## use sample() to get slope values and soil moisture values
-        ## convert soil moisture values to int?
-        ## convert soil moisture values to categories (5%)
-        ## refactor repetitive code into respective methods
-        ## clean up imports
-        ## calculate soil moisture statistics on slope values normalised for area
+        sm_samples = sample_gen(dataset=sm_dataset,xy=sm_pixel_coordinates, indexes=1, masked=True)
+
+        for i in range(1000):
+            print(next(sm_samples))
+
+        sm_samples_with_coord = list(zip(sm_pixel_coordinates, sm_samples))
+
+        # TODO - consider list comprehension
+        # sm_samples_with_coord[0][0][0] = Easting
+        # sm_samples_with_coord[0][0][1] = Northing
+        # sm_samples_with_coord[0][1][0] = Soil Moisture Value
+        valid_samples = list()
+        for x in sm_samples_with_coord:
+            if not np.ma.is_masked(sm_samples_with_coord[0][1][0]):
+                valid_samples.append([sm_samples_with_coord[0][0][0],
+                                     sm_samples_with_coord[0][0][1],
+                                     sm_samples_with_coord[0][1][0]])
+
+        for x in sm_samples_with_coord:
+            if not np.ma.is_masked(x[1][0]):
+                valid_samples.append([x[0][0],
+                                     x[0][1],
+                                     x[1][0]])
+
+        print(valid_samples)
+
+        # Print the minimum and maximum soil moisture value in the valid samples
+        np.set_printoptions(suppress=True)
+        print("Minimum soil moisture value: {}".format(np.amin(valid_samples, axis=0)[2]))
+        print("Minimum soil moisture value: {}".format(np.amax(valid_samples, axis=0)[2]))
+
+
+
+        # TODO
+        # use sample() to get slope values and soil moisture values
+        # convert soil moisture values to int?
+        # convert soil moisture values to categories (5%)
+        # refactor repetitive code into respective methods
+        # clean up imports
+        # calculate soil moisture statistics on slope values normalised for area
+        # clean up plots, add legend etc
 
 
 ## Finally - save the plots!
 
-fig.savefig(os.path.join(export_folder_location, "DTM.png"))
+
+fig.savefig(os.path.join(export_folder_location, "plots.png"))
+
+# ((ax_dtm, ax_hist), (ax_slope, ax_soil_moisture))
+extent = ax_dtm.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+fig.savefig(os.path.join(export_folder_location, 'dtm_subplot.png'),
+            bbox_inches=extent.expanded(1.25, 1.25))
+extent = ax_hist.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+fig.savefig(os.path.join(export_folder_location, 'histogram_subplot.png'),
+            bbox_inches=extent.expanded(1.25, 1.25))
+extent = ax_slope.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+fig.savefig(os.path.join(export_folder_location, 'slope_subplot.png'),
+            bbox_inches=extent.expanded(1.25, 1.25))
+extent = ax_soil_moisture.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+fig.savefig(os.path.join(export_folder_location, 'soil_moisture_subplot.png'),
+            bbox_inches=extent.expanded(1.25, 1.25))
+
+# calculate the script execution time to assist with refactoring later.
+print("Script execution time: {}".format(datetime.now() - startTime))
