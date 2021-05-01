@@ -206,7 +206,7 @@ with rasterio.open(src_file) as src:
         show(soil_moisture, cmap='RdYlGn_r',
              transform=sm_dataset.transform,
              ax=ax_slope,
-             title='Soil Moisture')
+             title='Slope & Soil Moisture')
 
         # Calculate some statistics
         # Start with the soil moisture data
@@ -234,15 +234,15 @@ with rasterio.open(src_file) as src:
         # sm_samples_with_coord[0][0][0] = Easting
         # sm_samples_with_coord[0][0][1] = Northing
         # sm_samples_with_coord[0][1][0] = Soil Moisture Value
-        valid_samples = list()
-
+        # copy the slope values to a new list disregarding masked values
+        valid_sm_samples = list()
         for x in sm_samples_with_coord:
             if not np.ma.is_masked(x[1][0]):
-                valid_samples.append([x[0][0],
+                valid_sm_samples.append([x[0][0],
                                       x[0][1],
                                       x[1][0]])
 
-        print("valid_samples count: {}".format(len(valid_samples)))
+        print("valid_samples count: {}".format(len(valid_sm_samples)))
 
         categorised_sm_values = {"10 - 15%": 0,
                                  "15 - 20%": 0,
@@ -255,7 +255,7 @@ with rasterio.open(src_file) as src:
                                  "50 - 55%": 0,
                                  "55 - 60%": 0}
 
-        for x in valid_samples:
+        for x in valid_sm_samples:
             if 10 < x[2] <= 15: categorised_sm_values["10 - 15%"] = categorised_sm_values["10 - 15%"] + 1
             if 15 < x[2] <= 20: categorised_sm_values["15 - 20%"] = categorised_sm_values["15 - 20%"] + 1
             if 20 < x[2] <= 25: categorised_sm_values["20 - 25%"] = categorised_sm_values["20 - 25%"] + 1
@@ -269,12 +269,12 @@ with rasterio.open(src_file) as src:
 
         print("Categorised soil moisture values: ", categorised_sm_values)
 
-        print(valid_samples)
+        print(valid_sm_samples)
 
         # Print the minimum and maximum soil moisture value in the valid samples
         np.set_printoptions(suppress=True)
-        print("Minimum soil moisture value: {}".format(np.amin(valid_samples, axis=0)[2]))
-        print("Minimum soil moisture value: {}".format(np.amax(valid_samples, axis=0)[2]))
+        print("Minimum soil moisture value: {}".format(np.amin(valid_sm_samples, axis=0)[2]))
+        print("Maximum soil moisture value: {}".format(np.amax(valid_sm_samples, axis=0)[2]))
 
 
 
@@ -286,6 +286,7 @@ with rasterio.open(src_file) as src:
         # clean up imports
         # calculate soil moisture statistics on slope values normalised for area
         # clean up plots, add legend etc
+        # add docstrings?
 
 
 
@@ -310,6 +311,7 @@ with rio.open(dst_file) as slope_dataset:
 
     print("Slope dataset profile: ", sm_dataset.profile)
 
+
     xcols = range(0, slope_dataset.width + 1)
     ycols = range(0, slope_dataset.height + 1)
 
@@ -320,11 +322,11 @@ with rio.open(dst_file) as slope_dataset:
     print("slope_pixel_coordinates count: {}".format(len(slope_pixel_coordinates)))
 
     # sample the raster values at the coordinates provided
-    slope_samples = sample_gen(dataset=slope_dataset, xy=slope_pixel_coordinates, indexes=1, masked=True)
+    slope_samples = sample_gen(dataset=slope_dataset, xy=sm_pixel_coordinates, indexes=1, masked=True)
 
     # print("sm_samples count: {}".format(sum(1 for _ in sm_samples)))
 
-    slope_samples_with_coord = list(zip(slope_pixel_coordinates, slope_samples))
+    slope_samples_with_coord = list(zip(sm_pixel_coordinates, slope_samples))
 
     print("slope_samples_with_coord count: {}".format(len(slope_samples_with_coord)))
 
@@ -332,21 +334,79 @@ with rio.open(dst_file) as slope_dataset:
     # sm_samples_with_coord[0][0][0] = Easting
     # sm_samples_with_coord[0][0][1] = Northing
     # sm_samples_with_coord[0][1][0] = Soil Moisture Value
-    valid_samples = list()
-
+    # copy the slope values to a new list disregarding masked values
+    valid_slope_samples = list()
     for x in slope_samples_with_coord:
         if not np.ma.is_masked(x[1][0]):
-            valid_samples.append([x[0][0],
+            valid_slope_samples.append([x[0][0],
                                   x[0][1],
                                   x[1][0]])
 
-    print("valid_samples count: {}".format(len(valid_samples)))
+    print("valid_samples count: {}".format(len(valid_slope_samples)))
 
 #############################################
 # End Slope Statistics ######################
 #############################################
 
+slope_and_sm_values = list()
 
+# build a dictionary containing only valid slope and soil moisture values
+# complete with soil moisture category
+
+print("Soil Moisture: ", valid_sm_samples[:10])
+print("Slope: ", valid_slope_samples[:10])
+
+print("Minimum slope easting value: {}".format(np.amin(valid_slope_samples, axis=0)[0]))
+print("Maximum slope easting value: {}".format(np.amax(valid_slope_samples, axis=0)[0]))
+print("Minimum slope northing value: {}".format(np.amin(valid_slope_samples, axis=0)[1]))
+print("Maximum slope northing value: {}".format(np.amax(valid_slope_samples, axis=0)[1]))
+
+print("Minimum sm easting value: {}".format(np.amin(valid_sm_samples, axis=0)[0]))
+print("Maximum sm easting value: {}".format(np.amax(valid_sm_samples, axis=0)[0]))
+print("Minimum sm northing value: {}".format(np.amin(valid_sm_samples, axis=0)[1]))
+print("Maximum sm northing value: {}".format(np.amax(valid_sm_samples, axis=0)[1]))
+
+#declare a var to hold the sm category
+sm_value_category = ["10 - 15%", "15 - 20%", "20 - 25%", "25 - 30%",
+                     "30 - 35%", "35 - 40%", "40 - 45%", "45 - 50%",
+                     "50 - 55%", "55 - 60%"]
+
+sm_category_text = -1
+
+
+# match up the coordinates of slope and soil moisture lists
+# and append them to a new array
+for x in valid_sm_samples:
+    #print("Found: ", [valid_slope_samples.index(x[0])])
+    for y in valid_slope_samples:
+        #print("x[0]: ", x[0])
+        #print("y[0]: ", y[0])
+        if x[0] == y[0] and x[1] == y[1]:
+            #print("Match!`")
+            if 10 < x[2] <= 15:
+                sm_category_text = 1
+            elif 15 < x[2] <= 20:
+                sm_category_text = 2
+            elif 20 < x[2] <= 25:
+                sm_category_text = 3
+            elif 25 < x[2] <= 30:
+                sm_category_text = 4
+            elif 30 < x[2] <= 35:
+                sm_category_text = 5
+            elif 35 < x[2] <= 40:
+                sm_category_text = 6
+            elif 40 < x[2] <= 45:
+                sm_category_text = 7
+            elif 45 < x[2] <= 50:
+                sm_category_text = 8
+            elif 50 < x[2] <= 55:
+                sm_category_text = 9
+            elif 55 < x[2] <= 60:
+                sm_category_text = 10
+            slope_and_sm_values.append([x[0], x[1], x[2], y[2], sm_category_text])
+
+
+print("Slope and Soil Moisture: ", slope_and_sm_values[:10])
 
 # Finally - save the plots!
 
