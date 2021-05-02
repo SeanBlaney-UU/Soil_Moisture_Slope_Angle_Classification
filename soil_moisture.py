@@ -1,39 +1,18 @@
 import os
 from pathlib import Path
-import timeit
-
 import numpy as np
-
 import rasterio as rio
-import geopandas as gpd
-import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import pandas as pd
-import csv
 from rasterio.plot import plotting_extent
 from rasterio.plot import show_hist
 from rasterio.transform import xy
 from rasterio.sample import sample_gen
-
-from shapely.ops import cascaded_union
-from shapely.geometry.polygon import Polygon
-from cartopy.feature import ShapelyFeature
-import matplotlib.patches as mpatches
-
 from rasterio.plot import show
-
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from cartopy.feature import ShapelyFeature
-import cartopy.crs as ccrs
-import matplotlib.patches as mpatches
-
 from osgeo import gdal
 import rasterio
 from rasterio.warp import calculate_default_transform, reproject, Resampling
-
 from datetime import datetime
-
-# TODO check if I can refine this import
 import math
 
 '''
@@ -121,12 +100,16 @@ def calculate_soil_moisture_interval(sm_value):
     else:
         return categorised_sm_values[sm_category_text]
 
-
-
-
+#########################################################
+# Record the start time #################################
+#########################################################
 
 # Record the time to provide execution time later
 startTime = datetime.now()
+
+#########################################################
+# Open and process the DEM ##############################
+#########################################################
 
 with rio.open(dem_location) as dataset:
     input_crs = dataset.crs
@@ -143,6 +126,7 @@ with rio.open(dem_location) as dataset:
     if (verbose_messages): print(plotting_extent(dataset))
 
     # for completeness, assign extents as per EGM722
+    # check EGM722 method matches my method
     xmin, ymin, xmax, ymax = dataset.bounds
     if (verbose_messages):
         print(xmin, ymin, xmax, ymax)
@@ -154,8 +138,6 @@ with rio.open(dem_location) as dataset:
 
         print(xmin)
         print(dem_plot_ext[0])
-
-    # check EGM722 method matches my method
 
     dtm_pre_arr = dataset.read(1, masked=True)
     dtm_pre_arr[dtm_pre_arr < 0] = np.nan
@@ -173,6 +155,7 @@ with rio.open(dem_location) as dataset:
     fig, ((ax_dtm, ax_hist), (ax_slope, ax_soil_moisture)) = plt.subplots(2, 2, figsize=(14, 8))
 
     # save the dtm min max values
+    # and start plotting the axes containing the digital elevation model
     dtm_min = dtm_pre_arr.min()
     dtm_max = dtm_pre_arr.max()
     dtm_cbar = ax_dtm.imshow(dtm_pre_arr,
@@ -225,10 +208,13 @@ with rio.open(dem_location) as dataset:
              title='Slope')
 
 
+#########################################################
+# End open and process the DEM ##########################
+#########################################################
 
-
-### Now open the soil moisture dataset
-
+#########################################################
+# Open and process the soil moisture dataset ############
+#########################################################
 
 src_file = sm_location
 dst_file = os.path.join(export_folder_location, "soil_moisture_reprojected.tif")
@@ -376,12 +362,13 @@ with rasterio.open(src_file) as src:
         # clean up plots, add legend etc
         # add docstrings?
 
+#########################################################
+# End open and process the soil moisture dataset ########
+#########################################################
 
-
-
-#############################################
-# Begin Slope Statistics ####################
-#############################################
+#########################################################
+# Begin calculating slope statistics ####################
+#########################################################
 
 src_file = sm_location
 dst_file = os.path.join(export_folder_location, "slope.tif")
@@ -430,9 +417,14 @@ with rio.open(dst_file) as slope_dataset:
 
     print("valid_samples count: {}".format(len(valid_slope_samples)))
 
-#############################################
-# End Slope Statistics ######################
-#############################################
+#########################################################
+# End calculating slope statistics ######################
+#########################################################
+
+
+#########################################################
+# Begin comparison of sm and slope samples ##############
+#########################################################
 
 slope_and_sm_values = list()
 
@@ -468,19 +460,23 @@ for x in valid_sm_samples:
         if x[0] == y[0] and x[1] == y[1]:
             slope_and_sm_values.append([x[0], x[1], y[2], x[2], calculate_soil_moisture_interval(x[2])])
 
-
+# print the first ten elements of the slope_and_sm_values list
 print("Slope and Soil Moisture: ", slope_and_sm_values[:10])
 print("Slope and Soil Moisture count: {}".format(len(slope_and_sm_values)))
 
-# Save some statistics as CSV
-
+# Save some statistics as a CSV
 df = pd.DataFrame.from_records(slope_and_sm_values, columns=["Easting", "Northing", "Slope Value",
                                                              "Soil Moisture Value", "Soil Moisture Interval"])
 
 df.to_csv(os.path.join(export_folder_location, "statistics.csv"), index=True, header=True)
 
+#########################################################
+# End comparison of sm and slope samples ################
+#########################################################
 
-
+#########################################################
+# Save the plots! #######################################
+#########################################################
 # Finally - save the plots!
 
 
@@ -492,4 +488,13 @@ create_individual_plot(ax_slope, "slope_subplot.png", [1.60, 2.20])
 create_individual_plot(ax_soil_moisture, "soil_moisture_subplot.png", [1.60, 2.20])
 
 # calculate the script execution time to assist with refactoring later.
+
+#########################################################
+# End saving the plots! #################################
+#########################################################
+
 print("Script execution time: {}".format(datetime.now() - startTime))
+
+#########################################################
+# End recording the start time ##########################
+#########################################################
