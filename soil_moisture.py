@@ -84,6 +84,47 @@ def create_individual_plot(axis, plot_name, ratio):
     fig.savefig(os.path.join(export_folder_location, plot_name),
                 bbox_inches=extent.expanded(ratio[0], ratio[1]))
 
+def calculate_soil_moisture_interval(sm_value):
+    '''
+    Function to categorise the provided soil moisture value into 5% intervals.
+    :param sm_value: Soil moisture value.
+    :return: Interval of soil moisture in 5% increments between 10% and 60% GWC.
+    '''
+    categorised_sm_values = ["10 - 15%", "15 - 20%", "20 - 25%", "25 - 30%", "30 - 35%",
+                             "35 - 40%", "40 - 45%", "45 - 50%", "50 - 55%", "55 - 60%"]
+
+    sm_category_text = -1
+
+    if 10 < sm_value <= 15:
+        sm_category_text = 0
+    elif 15 < sm_value <= 20:
+        sm_category_text = 1
+    elif 20 < sm_value <= 25:
+        sm_category_text = 2
+    elif 25 < sm_value <= 30:
+        sm_category_text = 3
+    elif 30 < sm_value <= 35:
+        sm_category_text = 4
+    elif 35 < sm_value <= 40:
+        sm_category_text = 5
+    elif 40 < sm_value <= 45:
+        sm_category_text = 6
+    elif 45 < sm_value <= 50:
+        sm_category_text = 7
+    elif 50 < sm_value <= 55:
+        sm_category_text = 8
+    elif 55 < sm_value <= 60:
+        sm_category_text = 9
+
+    if sm_category_text == -1:
+        return "Nan"
+    else:
+        return categorised_sm_values[sm_category_text]
+
+
+
+
+
 # Record the time to provide execution time later
 startTime = datetime.now()
 
@@ -424,31 +465,8 @@ sm_category_text = -1
 for x in valid_sm_samples:
     #print("Found: ", [valid_slope_samples.index(x[0])])
     for y in valid_slope_samples:
-        #print("x[0]: ", x[0])
-        #print("y[0]: ", y[0])
         if x[0] == y[0] and x[1] == y[1]:
-            #print("Match!`")
-            if 10 < x[2] <= 15:
-                sm_category_text = 1
-            elif 15 < x[2] <= 20:
-                sm_category_text = 2
-            elif 20 < x[2] <= 25:
-                sm_category_text = 3
-            elif 25 < x[2] <= 30:
-                sm_category_text = 4
-            elif 30 < x[2] <= 35:
-                sm_category_text = 5
-            elif 35 < x[2] <= 40:
-                sm_category_text = 6
-            elif 40 < x[2] <= 45:
-                sm_category_text = 7
-            elif 45 < x[2] <= 50:
-                sm_category_text = 8
-            elif 50 < x[2] <= 55:
-                sm_category_text = 9
-            elif 55 < x[2] <= 60:
-                sm_category_text = 10
-            slope_and_sm_values.append([x[0], x[1], y[2], x[2], sm_category_text])
+            slope_and_sm_values.append([x[0], x[1], y[2], x[2], calculate_soil_moisture_interval(x[2])])
 
 
 print("Slope and Soil Moisture: ", slope_and_sm_values[:10])
