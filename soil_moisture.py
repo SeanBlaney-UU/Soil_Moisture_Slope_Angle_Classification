@@ -274,6 +274,12 @@ with rasterio.open(src_file) as src:
 
         print(valid_sm_samples)
 
+
+        # save the count of catergorised soil moisture values to a csv
+        df = pd.DataFrame(list(categorised_sm_values.items()), columns=['Category', 'Count'])
+
+        df.to_csv(os.path.join(export_folder_location, "catergorised_count.csv"), index=False, header=True)
+
         # Print the minimum and maximum soil moisture value in the valid samples
         np.set_printoptions(suppress=True)
         print("Minimum soil moisture value: {}".format(np.amin(valid_sm_samples, axis=0)[2]))
