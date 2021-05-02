@@ -122,14 +122,29 @@ with rio.open(dem_location) as dataset:
 
     fig, ((ax_dtm, ax_hist), (ax_slope, ax_soil_moisture)) = plt.subplots(2, 2, figsize=(14, 8))
 
+    # save the dtm min max values
+    dtm_min = dtm_pre_arr.min()
+    dtm_max = dtm_pre_arr.max()
+    dtm_cbar = ax_dtm.imshow(dtm_pre_arr,
+                             cmap='terrain',
+                             vmin=dtm_min,
+                             vmax=dtm_max)
+    dtm_cbar.set_clim(vmin=dtm_min, vmax=dtm_max)
+    fig.colorbar(dtm_cbar, ax=ax_dtm)
+
     show(dtm_pre_arr, with_bounds=True,
          cmap='terrain',
          transform=dataset.transform,
          ax=ax_dtm,
-         title='Digital Elevation Model')
+         title='Digital Elevation Model',)
+
+
 
     show_hist(dtm_pre_arr, bins=20, lw=0.0, stacked=False, alpha=0.3, histtype='stepfilled',
-              title="Elevation Distribution", ax=ax_hist)
+              title="Elevation Distribution", ax=ax_hist, label="Count")
+    ax_hist.set_xlabel('Elevation Values')
+    ax_hist.set_ylabel('Frequency')
+
 
     gdal.DEMProcessing(os.path.join(export_folder_location, "slope.tif"),
                        srcDS=dem_location,
@@ -141,21 +156,25 @@ with rio.open(dem_location) as dataset:
         slope_data = slope_dataset.read(1, masked=True)
         slope_data[slope_data < 0] = np.nan
 
+
+        # save the soil moisture min max values
+        # and add colourbars to the plots
+        slope_min = 0.0
+        slope_max = 90.0
+        slope_cbar = ax_slope.imshow(slope_data,
+                                 cmap='Reds',
+                                 vmin=slope_min,
+                                 vmax=slope_max)
+        slope_cbar.set_clim(vmin=slope_min, vmax=slope_max)
+        fig.colorbar(slope_cbar, ax=ax_slope)
+
+
         show(slope_data, cmap='Reds',
              transform=dataset.transform,
              ax=ax_slope,
              title='Slope')
 
-    # with rio.open(sm_location) as sm_dataset:
-    #    #slope = slope_dataset.read(1)
 
-    #    soil_moisture = sm_dataset.read(1, masked=True)
-    #    soil_moisture[soil_moisture < 0] = np.nan
-#
-#        show(soil_moisture, cmap='RdYlGn',
-#             transform=dataset.transform,
-#             ax=ax_soil_moisture,
-#             title='Soil Moisture')
 
 
 ### Now open the soil moisture dataset
@@ -165,6 +184,7 @@ src_file = sm_location
 dst_file = os.path.join(export_folder_location, "soil_moisture_reprojected.tif")
 dst_crs = input_crs
 
+# open the soil moisture data provided as a tiff
 with rasterio.open(src_file) as src:
     transform, width, height = calculate_default_transform(
         src.crs, dst_crs, src.width, src.height, *src.bounds)
@@ -176,6 +196,7 @@ with rasterio.open(src_file) as src:
         'height': height
     })
 
+    # save the reprojected raster to a tiff file
     with rasterio.open(dst_file, 'w', **kwargs) as dst:
         for i in range(1, src.count + 1):
             reproject(
@@ -189,13 +210,26 @@ with rasterio.open(src_file) as src:
 
     # Open the reprojected soil moisture tif back up
     with rio.open(dst_file) as sm_dataset:
-        # slope = slope_dataset.read(1)
 
+        # read the dataset ensuring nodata is masked
         soil_moisture = sm_dataset.read(1, masked=True)
         soil_moisture[soil_moisture < 0] = np.nan
 
+        # save the soil moisture min max values
+        # and add colourbars to the plots
+        sm_min = 10.0
+        sm_max = 60.0
+        sm_cbar = ax_soil_moisture.imshow(soil_moisture,
+                                 cmap='RdYlGn_r',
+                                 vmin=sm_min,
+                                 vmax=sm_max)
+        sm_cbar.set_clim(vmin=sm_min, vmax=sm_max)
+        fig.colorbar(sm_cbar, ax=ax_soil_moisture)
+
+
         # plot the soil moisture
-        show(soil_moisture, cmap='RdYlGn_r',
+        show(soil_moisture, with_bounds=True,
+             cmap='RdYlGn_r',
              transform=sm_dataset.transform,
              ax=ax_soil_moisture,
              title='Soil Moisture')
@@ -328,8 +362,6 @@ with rio.open(dst_file) as slope_dataset:
     # sample the raster values at the coordinates provided
     slope_samples = sample_gen(dataset=slope_dataset, xy=sm_pixel_coordinates, indexes=1, masked=True)
 
-    # print("sm_samples count: {}".format(sum(1 for _ in sm_samples)))
-
     slope_samples_with_coord = list(zip(sm_pixel_coordinates, slope_samples))
 
     print("slope_samples_with_coord count: {}".format(len(slope_samples_with_coord)))
@@ -337,7 +369,7 @@ with rio.open(dst_file) as slope_dataset:
     # TODO - consider list comprehension
     # sm_samples_with_coord[0][0][0] = Easting
     # sm_samples_with_coord[0][0][1] = Northing
-    # sm_samples_with_coord[0][1][0] = Soil Moisture Value
+    # sm_samples_with_coord[0][1][0] = Slope Value
     # copy the slope values to a new list disregarding masked values
     valid_slope_samples = list()
     for x in slope_samples_with_coord:
