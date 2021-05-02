@@ -47,7 +47,7 @@ The two required raster files should be located at:
 
 ```
 data_files\DTM_Rev1_Clip.tif
-data_files\soil_moisture.tif
+data_files\SM_Resample_Bilinear.tif
 ```
 
 Deliverables that are created whilst processing are saved to:
