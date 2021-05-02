@@ -7,10 +7,13 @@ import rasterio as rio
 import geopandas as gpd
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
+import pandas as pd
+import csv
 from rasterio.plot import plotting_extent
 from rasterio.plot import show_hist
 from rasterio.transform import xy
 from rasterio.sample import sample_gen
+
 from shapely.ops import cascaded_union
 from shapely.geometry.polygon import Polygon
 from cartopy.feature import ShapelyFeature
@@ -403,10 +406,20 @@ for x in valid_sm_samples:
                 sm_category_text = 9
             elif 55 < x[2] <= 60:
                 sm_category_text = 10
-            slope_and_sm_values.append([x[0], x[1], x[2], y[2], sm_category_text])
+            slope_and_sm_values.append([x[0], x[1], y[2], x[2], sm_category_text])
 
 
 print("Slope and Soil Moisture: ", slope_and_sm_values[:10])
+print("Slope and Soil Moisture count: {}".format(len(slope_and_sm_values)))
+
+# Save some statistics as CSV
+
+df = pd.DataFrame.from_records(slope_and_sm_values, columns=["Easting", "Northing", "Slope Value",
+                                                             "Soil Moisture Value", "Soil Moisture Interval"])
+
+df.to_csv(os.path.join(export_folder_location, "statistics.csv"), index=True, header=True)
+
+
 
 # Finally - save the plots!
 
