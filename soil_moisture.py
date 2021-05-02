@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import timeit
 
 import numpy as np
@@ -21,26 +22,18 @@ import matplotlib.patches as mpatches
 
 from rasterio.plot import show
 
-import earthpy.plot as ep
-import earthpy.spatial as es
-
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from cartopy.feature import ShapelyFeature
 import cartopy.crs as ccrs
 import matplotlib.patches as mpatches
 
 from osgeo import gdal
-
-import numpy as np
 import rasterio
 from rasterio.warp import calculate_default_transform, reproject, Resampling
 
 from datetime import datetime
-from operator import itemgetter
 
-import geopandas
-
-# check if I can refine this import
+# TODO check if I can refine this import
 import math
 
 '''
@@ -63,6 +56,8 @@ sm_location = os.path.join("data_files",
                            "SM_Resample_Bilinear.tif")
 
 export_folder_location = os.path.join("exports")
+# create the exports folder in case it does not already exist.
+Path(export_folder_location).mkdir(parents=True, exist_ok=True)
 '''
 End File Directories
 '''
@@ -275,10 +270,10 @@ with rasterio.open(src_file) as src:
         print(valid_sm_samples)
 
 
-        # save the count of catergorised soil moisture values to a csv
+        # save the count of categorised soil moisture values to a csv
         df = pd.DataFrame(list(categorised_sm_values.items()), columns=['Category', 'Count'])
 
-        df.to_csv(os.path.join(export_folder_location, "catergorised_count.csv"), index=False, header=True)
+        df.to_csv(os.path.join(export_folder_location, "categorised_count.csv"), index=False, header=True)
 
         # Print the minimum and maximum soil moisture value in the valid samples
         np.set_printoptions(suppress=True)
