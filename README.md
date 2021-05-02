@@ -1,4 +1,4 @@
-# Soil Moisture Landform Classification
+# Soil Moisture Slope Angle Classification
 
 A tool to allow computation statistics with regard to high resolution soil moisture data and slope angle values.
 
@@ -20,10 +20,10 @@ and csv files are created:
 
 ## Installation
 
-Use the package manager pip to install Soil Moisture Landform Classification.
+Use the package manager pip to install Soil Moisture Slope Angle Classification.
 
 ```
-pip install git+ssh://git@github.com/SeanBlaney-UU/Soil_Moisture_Landform_Classification
+pip install git+ssh://git@github.com/SeanBlaney-UU/Soil_Moisture_Slope_Angle_Classification
 ```
 
 Once cloned to a local directory, cd into the project directory and create the following two directories within the root folder of the project:
