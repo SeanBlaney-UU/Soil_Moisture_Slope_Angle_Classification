@@ -74,6 +74,15 @@ def order_of_magnitude(max_value, min_value):
     mag_min_value = math.floor(math.log(min_value, 10))
     return (mag_max_value - mag_min_value)
 
+def create_individual_plot(axis, plot_name, ratio):
+    '''
+    Function to save individual plots.
+    :param axis: matplotlib axis containing the required plot.
+    :param plot_name: name of the plot used as the filename.
+    '''
+    extent = axis.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+    fig.savefig(os.path.join(export_folder_location, plot_name),
+                bbox_inches=extent.expanded(ratio[0], ratio[1]))
 
 # Record the time to provide execution time later
 startTime = datetime.now()
@@ -459,19 +468,10 @@ df.to_csv(os.path.join(export_folder_location, "statistics.csv"), index=True, he
 
 fig.savefig(os.path.join(export_folder_location, "plots.png"))
 
-# ((ax_dtm, ax_hist), (ax_slope, ax_soil_moisture))
-extent = ax_dtm.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-fig.savefig(os.path.join(export_folder_location, 'dtm_subplot.png'),
-            bbox_inches=extent.expanded(1.25, 1.25))
-extent = ax_hist.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-fig.savefig(os.path.join(export_folder_location, 'histogram_subplot.png'),
-            bbox_inches=extent.expanded(1.25, 1.25))
-extent = ax_slope.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-fig.savefig(os.path.join(export_folder_location, 'slope_subplot.png'),
-            bbox_inches=extent.expanded(1.25, 1.25))
-extent = ax_soil_moisture.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-fig.savefig(os.path.join(export_folder_location, 'soil_moisture_subplot.png'),
-            bbox_inches=extent.expanded(1.25, 1.25))
+create_individual_plot(ax_dtm, "dtm_subplot.png", [1.75, 1.50])
+create_individual_plot(ax_hist, "histogram_subplot.png", [1.40, 1.35])
+create_individual_plot(ax_slope, "slope_subplot.png", [1.60, 2.20])
+create_individual_plot(ax_soil_moisture, "soil_moisture_subplot.png", [1.60, 2.20])
 
 # calculate the script execution time to assist with refactoring later.
 print("Script execution time: {}".format(datetime.now() - startTime))
