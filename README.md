@@ -8,7 +8,7 @@ This tool was created to allow the production of statistics to provide a greater
 soil moisture value in relation to slope angle. Given a grid projected digital elevation model, the following plots 
 and csv files are created:
 
-* plots.png - An overview of indivual plots created during execution.
+* plots.png - An overview of individual plots created during execution.
 * dtm_subplot.png - A colourised plot of the digital elevation model.
 * histogram_subplot.png - A histogram plot of the distribution of elevation heights on a per cell basis.
 * slope_subplot.png - A colourised plot of slope angle, created using GDAL from the digital elevation model and overplotted with the soil moisture data to allow a visual confirmation of the correct transformation of the soil moisture data.
